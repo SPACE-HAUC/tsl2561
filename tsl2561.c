@@ -78,6 +78,7 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
 
 int tsl2561_configure(tsl2561 *dev)
 {
+    tsl2561_command m_con;
     uint8_t timing_conf = TSL2561_INTEGRATIONTIME_13MS;
     // 1) Configure command register
     m_con.cmd = 1;

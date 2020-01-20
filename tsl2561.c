@@ -28,29 +28,22 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     // Power the device - write to control register
 
     // 1) Configure command register
-    m_con.cmd = 1;
-    m_con.clear = 0;
-    m_con.word = 0;
-    m_con.block = 0;
-    m_con.address = TSL2561_REGISTER_CONTROL;
+    // m_con.cmd = 1;
+    // m_con.clear = 0;
+    // m_con.word = 0;
+    // m_con.block = 0;
+    // m_con.address = TSL2561_REGISTER_CONTROL;
 
-    // 2) Write to the control register
-    write_data = 0x03;
+    // // 2) Write to the control register
+    // write_data = 0x03;
     uint8_t cmd[2] ;
-    cmd[0] = m_con.raw ; cmd[1] = write_data ;
+    cmd[0] = 0x80 ; cmd[1] = 0x03 ;
     if (write(dev->fd, cmd, 2) < 2)
     {
         perror("[ERROR] Could not power on the sensor.");
         return -1;
     }
-    // printf("[DEBUG] TSL2561 waiting to proceed...\n") ;
-    char c;
-    do
-    {
-        printf("Press enter key to continue...");
-        scanf("%c", &c);
-    } while (c != '\n');
-    //usleep(10000);
+    usleep(1000);
     // Device is powered --> verify device is TSL2561 sensor - read from ID reg
 
     // 1) Configure the command register

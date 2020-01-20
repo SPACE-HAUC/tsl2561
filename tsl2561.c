@@ -54,14 +54,14 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     // Device is powered --> verify device is TSL2561 sensor - read from ID reg
 
     // 1) Configure the command register
-    m_con.cmd = 1;
-    m_con.clear = 0;
-    m_con.word = 0;
-    m_con.block = 0;
-    m_con.address = TSL2561_REGISTER_ID;
-
+    // m_con.cmd = 1;
+    // m_con.clear = 0;
+    // m_con.word = 0;
+    // m_con.block = 0;
+    // m_con.address = TSL2561_REGISTER_ID;
+    cmd[0] = 0x8a ;
     // 2) Initiate the read command and read byte from ID register
-    dev_id = write(dev->fd, &(m_con.raw),1);
+    dev_id = write(dev->fd, cmd,1);
     dev_id = read(dev->fd, cmd, 1) ;
     if (dev_id < 1)
     {

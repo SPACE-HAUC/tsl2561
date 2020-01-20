@@ -104,21 +104,31 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
 
 int tsl2561_configure(tsl2561 *dev)
 {
-    tsl2561_command m_con;
-    uint8_t timing_conf = TSL2561_INTEGRATIONTIME_13MS;
-    // 1) Configure command register
-    m_con.cmd = 1;
-    m_con.clear = 0;
-    m_con.word = 0;
-    m_con.block = 0;
-    m_con.address = TSL2561_REGISTER_TIMING;
+    // tsl2561_command m_con;
+    // uint8_t timing_conf = TSL2561_INTEGRATIONTIME_13MS;
+    // // 1) Configure command register
+    // m_con.cmd = 1;
+    // m_con.clear = 0;
+    // m_con.word = 0;
+    // m_con.block = 0;
+    // m_con.address = TSL2561_REGISTER_TIMING;
 
-    if (i2c_smbus_write_byte_data(dev->fd, m_con.raw, timing_conf) < 0)
+    // if (i2c_smbus_write_byte_data(dev->fd, m_con.raw, timing_conf) < 0)
+    // {
+    //     perror("[ERROR] Could not change the integration time.");
+    //     return -1;
+    // }
+    uint8_t cmd[2] ;
+    cmd[0] = 0x81 ; cmd[1] = 0x00 ;
+    if ( write(dev->fd, cmd, 2) < 2)
     {
-        perror("[ERROR] Could not change the integration time.");
-        return -1;
+        perror("[ERROR] Could not write the integration time register.");
     }
-
+    if ( read(dev->fd, cmd, 1) < 1)
+    {
+        perror("[ERROR] Could not read the integration time register.");
+    }
+    printf("[DEBUG] TSL2561 config timing reg: 0x%x\n", cmd[0]);
     return 1;
 }
 

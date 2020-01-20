@@ -83,11 +83,12 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     // }
 
     // Verify device powerup
-    m_con.cmd = 1;
-    m_con.clear = 0;
-    m_con.word = 0;
-    m_con.block = 0;
-    m_con.address = TSL2561_REGISTER_CONTROL;
+    // m_con.cmd = 1;
+    // m_con.clear = 0;
+    // m_con.word = 0;
+    // m_con.block = 0;
+    // m_con.address = TSL2561_REGISTER_CONTROL;
+    cmd[0] = 0x80 ;
     dev_id = write(dev->fd, &(m_con.raw),1);
     if ((dev_id = read(dev->fd, cmd,1)) < 0)
     {

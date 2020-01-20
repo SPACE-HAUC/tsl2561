@@ -37,7 +37,7 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     // 2) Write to the control register
     write_data = 0x03;
 
-    if (i2c_smbus_write_byte_data(dev->fd, m_con.raw, write_data) < 0)
+    if (i2c_smbus_write_byte_data(dev->fd, 0x80, write_data) < 0)
     {
         perror("[ERROR] Could not power on the sensor.");
         return -1;
@@ -53,7 +53,7 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     m_con.address = TSL2561_REGISTER_ID;
 
     // 2) Initiate the read command and read byte from ID register
-    dev_id = i2c_smbus_read_byte_data(dev->fd, m_con.raw);
+    dev_id = i2c_smbus_read_byte_data(dev->fd, 0x8a);
     if (dev_id < 0)
     {
         perror("[ERROR] Could not read device ID.");
@@ -79,7 +79,7 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     m_con.word = 0;
     m_con.block = 0;
     m_con.address = TSL2561_REGISTER_CONTROL;
-    if ((dev_id = i2c_smbus_read_byte_data(dev->fd, m_con.raw)) < 0)
+    if ((dev_id = i2c_smbus_read_byte_data(dev->fd, 0x80)) < 0)
     {
         perror("[ERROR] Could not read device config.");
         return -1;

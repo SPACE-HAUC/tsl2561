@@ -68,8 +68,18 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     printf("[DEBUG] TSL2561 Init: Read config register: 0x%x\n", cmd[0]) ;
     if ((uint8_t)cmd[0] == 0x03)
     {
-        printf("Initialization failed: 0x%x\n\n", 0x000000ff & (uint8_t)cmd[0]);
+        printf("TSL2561 Initialization failed: 0x%x\n\n", 0x000000ff & (uint8_t)cmd[0]);
     }
+    cmd[0] = 0x81 ; cmd[1] = 0x00 ;
+    if ( write(dev->fd, cmd, 2) < 2)
+    {
+        perror("[ERROR] Could not write the integration time register.");
+    }
+    if ( read(dev->fd, cmd, 1) < 1)
+    {
+        perror("[ERROR] Could not read the integration time register.");
+    }
+    printf("[DEBUG] TSL2561 config timing reg: 0x%x\n", cmd[0]);
     return 1;
 }
 

@@ -26,8 +26,9 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     }
 
     // Power the device - write to control register
-    uint8_t cmd[2] ;
-    cmd[0] = 0x80 ; cmd[1] = 0x03 ;
+    uint8_t cmd[2];
+    cmd[0] = 0x80;
+    cmd[1] = 0x03;
     if (write(dev->fd, cmd, 2) < 2)
     {
         perror("[ERROR] Could not power on the sensor.");
@@ -37,11 +38,11 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     // Device is powered --> verify device is TSL2561 sensor - read from ID reg
 
     // 1) Configure the command register
-    cmd[0] = 0x8a ;
+    cmd[0] = 0x8a;
     // 2) Initiate the read command and read byte from ID register
-    dev_id = write(dev->fd, cmd,1);
+    dev_id = write(dev->fd, cmd, 1);
     usleep(100);
-    dev_id = read(dev->fd, cmd, 1) ;
+    dev_id = read(dev->fd, cmd, 1);
     if (dev_id < 1)
     {
         perror("[ERROR] Could not read device ID.");
@@ -53,24 +54,25 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     uint8_t revno = (cmd[0] & 0x0F);
 
     printf("PARTNO: [%X], REVNO: [%04X]\n", partno, revno);
-    cmd[0] = 0x80 ;
-    dev_id = write(dev->fd, cmd,1);
-    if ((dev_id = read(dev->fd, cmd,1)) < 0)
+    cmd[0] = 0x80;
+    dev_id = write(dev->fd, cmd, 1);
+    if ((dev_id = read(dev->fd, cmd, 1)) < 0)
     {
         perror("[ERROR] Could not read device config.");
         return -1;
     }
-    printf("[DEBUG] TSL2561 Init: Read config register: 0x%x\n", cmd[0]) ;
+    printf("[DEBUG] TSL2561 Init: Read config register: 0x%x\n", cmd[0]);
     if ((uint8_t)cmd[0] == 0x03)
     {
         printf("TSL2561 Initialization failed: 0x%x\n\n", 0x000000ff & (uint8_t)cmd[0]);
     }
-    cmd[0] = 0x81 ; cmd[1] = 0x00 ;
-    if ( write(dev->fd, cmd, 2) < 2)
+    cmd[0] = 0x81;
+    cmd[1] = 0x00;
+    if (write(dev->fd, cmd, 2) < 2)
     {
         perror("[ERROR] Could not write the integration time register.");
     }
-    if ( read(dev->fd, cmd, 1) < 1)
+    if (read(dev->fd, cmd, 1) < 1)
     {
         perror("[ERROR] Could not read the integration time register.");
     }
@@ -81,13 +83,14 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
 int tsl2561_configure(tsl2561 *dev)
 {
 
-    uint8_t cmd[2] ;
-    cmd[0] = 0x81 ; cmd[1] = 0x00 ;
-    if ( write(dev->fd, cmd, 2) < 2)
+    uint8_t cmd[2];
+    cmd[0] = 0x81;
+    cmd[1] = 0x00;
+    if (write(dev->fd, cmd, 2) < 2)
     {
         perror("[ERROR] Could not write the integration time register.");
     }
-    if ( read(dev->fd, cmd, 1) < 1)
+    if (read(dev->fd, cmd, 1) < 1)
     {
         perror("[ERROR] Could not read the integration time register.");
     }
@@ -131,52 +134,53 @@ int tsl2561_read_block_data(tsl2561 *dev, uint8_t *data)
     // this is a very easy way to create a memory leak.
 }
 
-int tsl2561_read_word_data(tsl2561*dev , uint8_t * data)
+int tsl2561_read_word_data(tsl2561 *dev, uint8_t *data)
 {
     // Read the Ch0 register
-    int ch0 = 0x00 ;
-    if ( (ch0 = i2c_smbus_read_word_data(dev->fd, 0xac)) < 0)
+    int ch0 = 0x00;
+    if ((ch0 = i2c_smbus_read_word_data(dev->fd, 0xac)) < 0)
     {
         perror("[ERROR] Could not perform a word read from the ch0.");
         return -1;
     }
-    *((uint16_t*)data) = 0x0000ffff & ch0 ;
+    *((uint16_t *)data) = 0x0000ffff & ch0;
     printf("[DEBUG] Read Ch0: 0x%x\n", ch0);
-    if ( (ch0 = i2c_smbus_read_word_data(dev->fd, 0xae)) < 0)
+    if ((ch0 = i2c_smbus_read_word_data(dev->fd, 0xae)) < 0)
     {
         perror("[ERROR] Could not perform a word read from the ch1.");
         return -1;
     }
-    *((uint16_t*)&(data[2])) = 0x0000ffff & ch0 ;
+    *((uint16_t *)&(data[2])) = 0x0000ffff & ch0;
     printf("[DEBUG] Read Ch0: 0x%x\n", ch0);
-    return 1 ;
+    return 1;
 }
 
-int tsl2561_read_byte_data(tsl2561* dev, uint8_t * data)
+int tsl2561_read_byte_data(tsl2561 *dev, uint8_t *data)
 {
-    uint8_t cmd = 0x8c ; int status = 1 ;
-    for ( int i = 0 ; i < 4 ; i++ )
+    uint8_t cmd = 0x8c;
+    int status = 1;
+    for (int i = 0; i < 4; i++)
     {
-        uint8_t tmp = 0x00 ;
-        int ch = i2c_smbus_read_byte_data(dev->fd, cmd) ;
-        cmd++ ;
-        if ( ch < 0 )
+        uint8_t tmp = 0x00;
+        int ch = i2c_smbus_read_byte_data(dev->fd, cmd);
+        cmd++;
+        if (ch < 0)
         {
-            perror("[ERROR] Could not read byte data") ;
-            status = 0 ;
+            perror("[ERROR] Could not read byte data");
+            status = 0;
         }
-        data[i] = ch ;
-        printf("[DEBUG] TSL2561 read byte: %d 0x%x -> 0x%x\n", ch , cmd - 1, tmp ) ;
+        data[i] = ch;
+        printf("[DEBUG] TSL2561 read byte: %d 0x%x -> 0x%x\n", ch, cmd - 1, tmp);
     }
-    return status ;
+    return status;
 }
 
-int tsl2561_read_i2c_data(tsl2561* dev, uint8_t * data)
+int tsl2561_read_i2c_data(tsl2561 *dev, uint8_t *data)
 {
-    char cmd = 0x9b ;
-    write(dev->fd, &cmd, 1) ;
-    read(dev->fd, data, 4) ;
-    return 1 ;
+    char cmd = 0x9b;
+    write(dev->fd, &cmd, 1);
+    read(dev->fd, data, 4);
+    return 1;
 }
 
 int tsl2561_read_config(tsl2561 *dev, uint8_t *data)
@@ -206,8 +210,10 @@ int tsl2561_read_config(tsl2561 *dev, uint8_t *data)
 
 void tsl2561_destroy(tsl2561 *dev)
 {
-    uint8_t cmd[2] ; cmd[0] = 0x80 ; cmd[1] = 0x00 ;
-    write(dev->fd, cmd, 2) ;
+    uint8_t cmd[2];
+    cmd[0] = 0x80;
+    cmd[1] = 0x00;
+    write(dev->fd, cmd, 2);
     close(dev->fd);
     free(dev);
 }

@@ -132,7 +132,7 @@ int tsl2561_write(tsl2561 *dev, uint8_t reg_addr, uint8_t data)
     return 1;
 }
 
-int tsl2561_read_data(tsl2561 *dev, uint8_t *data)
+int tsl2561_read_block_data(tsl2561 *dev, uint8_t *data)
 {
     // tsl2561_command m_con;
 
@@ -144,7 +144,7 @@ int tsl2561_read_data(tsl2561 *dev, uint8_t *data)
     // m_con.address = TSL2561_BLOCK_READ;
 
     // Perform block reading of all 4 data registers - 4 bytes read
-    if (i2c_smbus_read_block_data(dev->fd, 0x9b, data) < 0)
+    if (i2c_smbus_read_i2c_block_data(dev->fd, 0x9b, 4, data) < 0)
     {
         perror("[ERROR] Could not perform a block read from the data registers.");
         return -1;
@@ -155,6 +155,25 @@ int tsl2561_read_data(tsl2561 *dev, uint8_t *data)
 
     // You should not allocate memory in a function call and return a pointer to that to the caller,
     // this is a very easy way to create a memory leak.
+}
+
+int tsl2561_read_word_data(tsl2561*dev , uint8_t * data)
+{
+    // Read the Ch0 register
+    int ch0 = 0x00 ;
+    if ( (ch0 = i2c_smbus_read_word_data(dev->fd, 0xac)) < 0)
+    {
+        perror("[ERROR] Could not perform a word read from the ch0.");
+        return -1;
+    }
+    *((uint16_t*)data) = 0x0000ffff & ch0 ;
+    if ( (ch0 = i2c_smbus_read_word_data(dev->fd, 0xae)) < 0)
+    {
+        perror("[ERROR] Could not perform a word read from the ch1.");
+        return -1;
+    }
+    *((uint16_t*)&(data[2])) = 0x0000ffff & ch0 ;
+    return 1 ;
 }
 
 int tsl2561_read_config(tsl2561 *dev, uint8_t *data)

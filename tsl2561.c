@@ -167,12 +167,14 @@ int tsl2561_read_word_data(tsl2561*dev , uint8_t * data)
         return -1;
     }
     *((uint16_t*)data) = 0x0000ffff & ch0 ;
+    printf("[DEBUG] Read Ch0: 0x04x\n", ch0);
     if ( (ch0 = i2c_smbus_read_word_data(dev->fd, 0xae)) < 0)
     {
         perror("[ERROR] Could not perform a word read from the ch1.");
         return -1;
     }
     *((uint16_t*)&(data[2])) = 0x0000ffff & ch0 ;
+    printf("[DEBUG] Read Ch0: 0x04x\n", ch0);
     return 1 ;
 }
 

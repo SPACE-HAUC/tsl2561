@@ -37,11 +37,6 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     // Device is powered --> verify device is TSL2561 sensor - read from ID reg
 
     // 1) Configure the command register
-    // m_con.cmd = 1;
-    // m_con.clear = 0;
-    // m_con.word = 0;
-    // m_con.block = 0;
-    // m_con.address = TSL2561_REGISTER_ID;
     cmd[0] = 0x8a ;
     // 2) Initiate the read command and read byte from ID register
     dev_id = write(dev->fd, cmd,1);
@@ -85,20 +80,7 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
 
 int tsl2561_configure(tsl2561 *dev)
 {
-    // tsl2561_command m_con;
-    // uint8_t timing_conf = TSL2561_INTEGRATIONTIME_13MS;
-    // // 1) Configure command register
-    // m_con.cmd = 1;
-    // m_con.clear = 0;
-    // m_con.word = 0;
-    // m_con.block = 0;
-    // m_con.address = TSL2561_REGISTER_TIMING;
 
-    // if (i2c_smbus_write_byte_data(dev->fd, m_con.raw, timing_conf) < 0)
-    // {
-    //     perror("[ERROR] Could not change the integration time.");
-    //     return -1;
-    // }
     uint8_t cmd[2] ;
     cmd[0] = 0x81 ; cmd[1] = 0x00 ;
     if ( write(dev->fd, cmd, 2) < 2)
@@ -136,16 +118,6 @@ int tsl2561_write(tsl2561 *dev, uint8_t reg_addr, uint8_t data)
 
 int tsl2561_read_block_data(tsl2561 *dev, uint8_t *data)
 {
-    // tsl2561_command m_con;
-
-    // // Configure command register for block reading of all the data registers
-    // m_con.cmd = 1;
-    // m_con.clear = 0;
-    // m_con.word = 0;
-    // m_con.block = 1;
-    // m_con.address = TSL2561_BLOCK_READ;
-
-    // Perform block reading of all 4 data registers - 4 bytes read
     if (i2c_smbus_read_i2c_block_data(dev->fd, 0x9b, 4, data) < 0)
     {
         perror("[ERROR] Could not perform a block read from the data registers.");
@@ -234,6 +206,8 @@ int tsl2561_read_config(tsl2561 *dev, uint8_t *data)
 
 void tsl2561_destroy(tsl2561 *dev)
 {
+    uint8_t cmd[2] ; cmd[0] = 0x80 ; cmd[1] = 0x00 ;
+    write(dev->fd, cmd, 2) ;
     close(dev->fd);
     free(dev);
 }

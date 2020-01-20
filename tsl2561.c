@@ -61,18 +61,33 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     }
 
     // Extract the part number and the revision number
-    uint8_t partno = (dev_id & 0x00000F0) >> 4;
-    uint8_t revno = (dev_id & 0x0000000F);
+    uint8_t partno = (dev_id & 0xF0) >> 4;
+    uint8_t revno = (dev_id & 0x0F);
 
     printf("PARTNO: [%X], REVNO: [%04X]\n", partno, revno);
 
     // If the part number is not 0x01, then the device is NOT TSL2561 - error
-    if (partno != 0x01)
+    // if (partno != 0x01)
+    // {
+    //     perror("[ERROR] Invalid device.");
+    //     return -1;
+    // }
+
+    // Verify device powerup
+    m_con.cmd = 1;
+    m_con.clear = 0;
+    m_con.word = 0;
+    m_con.block = 0;
+    m_con.address = TSL2561_REGISTER_CONTROL;
+    if ((dev_id = i2c_smbus_read_byte_data(dev->fd, m_con.raw)) < 0)
     {
-        perror("[ERROR] Invalid device.");
+        perror("[ERROR] Could not read device config.");
         return -1;
     }
-    
+    if ((uint8_t)dev_id & 0x03)
+    {
+        printf("Initialization success: 0x%x", 0x000000ff & (uint8_t)dev_id);
+    }
     return 1;
 }
 
@@ -96,7 +111,7 @@ int tsl2561_configure(tsl2561 *dev)
     return 1;
 }
 
-int tsl2561_write(tsl2561* dev, uint8_t reg_addr, uint8_t data)
+int tsl2561_write(tsl2561 *dev, uint8_t reg_addr, uint8_t data)
 {
     tsl2561_command m_con;
 
@@ -119,26 +134,27 @@ int tsl2561_write(tsl2561* dev, uint8_t reg_addr, uint8_t data)
 
 int tsl2561_read_data(tsl2561 *dev, uint8_t *data)
 {
-    tsl2561_command m_con;
-    uint8_t buf[4];
+    // tsl2561_command m_con;
 
-    // Configure command register for block reading of all the data registers
-    m_con.cmd = 1;
-    m_con.clear = 0;
-    m_con.word = 0;
-    m_con.block = 1;
-    m_con.address = TSL2561_BLOCK_READ;
-    
+    // // Configure command register for block reading of all the data registers
+    // m_con.cmd = 1;
+    // m_con.clear = 0;
+    // m_con.word = 0;
+    // m_con.block = 1;
+    // m_con.address = TSL2561_BLOCK_READ;
+
     // Perform block reading of all 4 data registers - 4 bytes read
-    if (i2c_smbus_read_i2c_block_data(dev->fd, m_con.raw, 4, buf) < 0)
+    if (i2c_smbus_read_i2c_block_data(dev->fd, 0x9b, 4, data) < 0)
     {
-        perror("[ERROR] Could not read from the data registers.");
+        perror("[ERROR] Could not perform a block read from the data registers.");
         return -1;
     }
 
     // Return the read data
-    *data = *buf;
     return 1;
+
+    // You should not allocate memory in a function call and return a pointer to that to the caller,
+    // this is a very easy way to create a memory leak.
 }
 
 int tsl2561_read_config(tsl2561 *dev, uint8_t *data)
@@ -152,7 +168,7 @@ int tsl2561_read_config(tsl2561 *dev, uint8_t *data)
     m_con.word = 0;
     m_con.block = 0;
     m_con.address = TSL2561_REGISTER_TIMING;
-    
+
     // Perform block reading of all 4 data registers - 4 bytes read
     configuration = i2c_smbus_read_byte_data(dev->fd, m_con.raw);
     if (configuration < 0)
@@ -165,4 +181,3 @@ int tsl2561_read_config(tsl2561 *dev, uint8_t *data)
     *data = (configuration & 0x000000FF);
     return 1;
 }
-

@@ -21,7 +21,8 @@
 #include <sys/ioctl.h>
 #include <linux/types.h>
 #include <linux/i2c-dev.h>
-#include </usr/src/linux-headers-4.4.0-171-generic/include/config/i2c/smbus.h>
+//#include </usr/src/linux-headers-4.4.0-171-generic/include/config/i2c/smbus.h>
+#include <i2c/smbus.h>
 #include <signal.h>
 
 /******************************************************************************/
@@ -156,7 +157,7 @@ typedef enum
 } tsl2561Gain_t;
 
 /******************************************************************************/
-#define I2C_BUS "/dev/i2c-0" // I2C bus name
+#define I2C_BUS "/dev/i2c-1" // I2C bus name
 #define TSL2561_BLOCK_READ 0x0B;
 
 // TSL2561 COMMAND REGISTER - SEND FIRST

@@ -144,7 +144,7 @@ int tsl2561_read_data(tsl2561 *dev, uint8_t *data)
     // m_con.address = TSL2561_BLOCK_READ;
 
     // Perform block reading of all 4 data registers - 4 bytes read
-    if (i2c_smbus_read_i2c_block_data(dev->fd, 0x9b, 4, data) < 0)
+    if (i2c_smbus_read_block_data(dev->fd, 0x9b, data) < 0)
     {
         perror("[ERROR] Could not perform a block read from the data registers.");
         return -1;

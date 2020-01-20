@@ -84,6 +84,7 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
         perror("[ERROR] Could not read device config.");
         return -1;
     }
+    printf("[DEBUG] TSL2561 Init: Read config register: 0x%x\n", dev_id) ;
     if ((uint8_t)dev_id & 0x03)
     {
         printf("Initialization success: 0x%x", 0x000000ff & (uint8_t)dev_id);

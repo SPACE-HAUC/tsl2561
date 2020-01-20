@@ -185,5 +185,6 @@ int tsl2561_configure(tsl2561 *dev);
 int tsl2561_write(tsl2561 *dev, uint8_t reg_addr, uint8_t data);
 int tsl2561_read_data(tsl2561 *dev, uint8_t *data);
 int tsl2561_read_config(tsl2561 *dev, uint8_t *data);
+void tsl2561_destroy(tsl2561 *dev);
 
 #endif // TSL2561_H

@@ -181,3 +181,9 @@ int tsl2561_read_config(tsl2561 *dev, uint8_t *data)
     *data = (configuration & 0x000000FF);
     return 1;
 }
+
+void tsl2561_destroy(tsl2561 *dev)
+{
+    close(dev->fd);
+    free(dev);
+}

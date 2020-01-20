@@ -14,28 +14,18 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     dev->fd = open(I2C_BUS, O_RDWR);
     if (dev->fd < 0)
     {
-        perror("[ERROR] Could not create a file descriptor.");
+        perror("[ERROR] TSL2561 Could not create a file descriptor.");
         return -1;
     }
 
     // Configure file descriptor handle as a slave device w/input address
     if (ioctl(dev->fd, I2C_SLAVE, s_address) < 0)
     {
-        perror("[ERROR] Could not assign device.");
+        perror("[ERROR] TSL2561 Could not assign device.");
         return -1;
     }
 
     // Power the device - write to control register
-
-    // 1) Configure command register
-    // m_con.cmd = 1;
-    // m_con.clear = 0;
-    // m_con.word = 0;
-    // m_con.block = 0;
-    // m_con.address = TSL2561_REGISTER_CONTROL;
-
-    // // 2) Write to the control register
-    // write_data = 0x03;
     uint8_t cmd[2] ;
     cmd[0] = 0x80 ; cmd[1] = 0x03 ;
     if (write(dev->fd, cmd, 2) < 2)
@@ -69,7 +59,7 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
 
     printf("PARTNO: [%X], REVNO: [%04X]\n", partno, revno);
     cmd[0] = 0x80 ;
-    dev_id = write(dev->fd, &(m_con.raw),1);
+    dev_id = write(dev->fd, cmd,1);
     if ((dev_id = read(dev->fd, cmd,1)) < 0)
     {
         perror("[ERROR] Could not read device config.");

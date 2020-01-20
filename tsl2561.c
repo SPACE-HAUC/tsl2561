@@ -192,6 +192,7 @@ int tsl2561_read_byte_data(tsl2561* dev, uint8_t * data)
             status = 0 ;
         }
         data[i] = ch ;
+        printf("[DEBUG] TSL2561 read byte: 0x%x -> 0x%x\n", cmd - 1, ch ) ;
     }
     return status ;
 }

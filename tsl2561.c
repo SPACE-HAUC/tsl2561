@@ -184,15 +184,16 @@ int tsl2561_read_byte_data(tsl2561* dev, uint8_t * data)
     uint8_t cmd = 0x8c ; int status = 1 ;
     for ( int i = 0 ; i < 4 ; i++ )
     {
-        int ch = i2c_smbus_read_byte_data(dev->fd, cmd) ;
+        uint8_t tmp = 0x00 ;
+        int ch = i2c_smbus_read_i2c_block_data(dev->fd, cmd, 1, &tmp) ;
         cmd++ ;
         if ( ch < 0 )
         {
             perror("[ERROR] Could not read byte data") ;
             status = 0 ;
         }
-        data[i] = ch ;
-        printf("[DEBUG] TSL2561 read byte: 0x%x -> 0x%x\n", cmd - 1, ch ) ;
+        data[i] = tmp ;
+        printf("[DEBUG] TSL2561 read byte: 0x%x -> 0x%x\n", cmd - 1, tmp ) ;
     }
     return status ;
 }

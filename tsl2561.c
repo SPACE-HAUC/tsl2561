@@ -200,13 +200,9 @@ int tsl2561_read_byte_data(tsl2561* dev, uint8_t * data)
 
 int tsl2561_read_i2c_data(tsl2561* dev, uint8_t * data)
 {
-    char cmd = 0x8c ;
-    for ( int i = 0 ; i < 4 ; i++){
-        write(dev->fd, &cmd, 1) ;
-        int val = read(dev->fd, &data[i], 1) ;
-        printf("[DEBUG] READ_I2C_DATA: %d -> %d || 0x%x -> 0x%x\n", i, val, cmd, data[i]) ;
-        cmd++ ;
-    }
+    char cmd = 0x9b ;
+    write(dev->fd, &cmd, 1) ;
+    read(dev->fd, data, 4) ;
     return 1 ;
 }
 

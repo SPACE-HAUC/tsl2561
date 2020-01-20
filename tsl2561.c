@@ -62,6 +62,7 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     cmd[0] = 0x8a ;
     // 2) Initiate the read command and read byte from ID register
     dev_id = write(dev->fd, cmd,1);
+    usleep(100);
     dev_id = read(dev->fd, cmd, 1) ;
     if (dev_id < 1)
     {

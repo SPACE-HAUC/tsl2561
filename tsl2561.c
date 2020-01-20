@@ -178,9 +178,12 @@ int tsl2561_read_byte_data(tsl2561 *dev, uint8_t *data)
 int tsl2561_read_i2c_data(tsl2561 *dev, uint8_t *data)
 {
     char cmd = 0x9b;
-    write(dev->fd, &cmd, 1);
-    read(dev->fd, data, 4);
-    return 1;
+    int status = 1;
+    if (write(dev->fd, &cmd, 1) < 1)
+        status = -1;
+    if (read(dev->fd, data, 4) < 4)
+        status = 0;
+    return status;
 }
 
 int tsl2561_read_config(tsl2561 *dev, uint8_t *data)
@@ -206,6 +209,149 @@ int tsl2561_read_config(tsl2561 *dev, uint8_t *data)
     // Return the read data
     *data = (configuration & 0x000000FF);
     return 1;
+}
+
+uint32_t tsl2561_get_lux(tsl2561 *dev)
+{
+    uint8_t data[4];
+    int status = tsl2561_read_i2c_data(dev, data);
+    unsigned long chScale;
+    unsigned long channel1;
+    unsigned long channel0;
+
+    /* Make sure the sensor isn't saturated! */
+    uint16_t clipThreshold = TSL2561_CLIPPING_13MS;
+    uint16_t broadband = ((uint16_t *)data)[0];
+    uint16_t ir = ((uint16_t *)data)[1];
+    /* Return 65536 lux if the sensor is saturated */
+    if ((broadband > clipThreshold) || (ir > clipThreshold))
+    {
+        return 65536;
+    }
+
+    /* Get the correct scale depending on the intergration time */
+
+    chScale = TSL2561_LUX_CHSCALE_TINT0;
+
+    /* Scale for gain (1x or 16x) */
+    // if (!_tsl2561Gain)
+    //     chScale = chScale << 4;
+
+    /* Scale the channel values */
+    channel0 = (broadband * chScale) >> TSL2561_LUX_CHSCALE;
+    channel1 = (ir * chScale) >> TSL2561_LUX_CHSCALE;
+
+    /* Find the ratio of the channel values (Channel1/Channel0) */
+    unsigned long ratio1 = 0;
+    if (channel0 != 0)
+        ratio1 = (channel1 << (TSL2561_LUX_RATIOSCALE + 1)) / channel0;
+
+    /* round the ratio value */
+    unsigned long ratio = (ratio1 + 1) >> 1;
+
+    unsigned int b, m;
+
+#ifdef TSL2561_PACKAGE_CS
+    if ((ratio >= 0) && (ratio <= TSL2561_LUX_K1C))
+    {
+        b = TSL2561_LUX_B1C;
+        m = TSL2561_LUX_M1C;
+    }
+    else if (ratio <= TSL2561_LUX_K2C)
+    {
+        b = TSL2561_LUX_B2C;
+        m = TSL2561_LUX_M2C;
+    }
+    else if (ratio <= TSL2561_LUX_K3C)
+    {
+        b = TSL2561_LUX_B3C;
+        m = TSL2561_LUX_M3C;
+    }
+    else if (ratio <= TSL2561_LUX_K4C)
+    {
+        b = TSL2561_LUX_B4C;
+        m = TSL2561_LUX_M4C;
+    }
+    else if (ratio <= TSL2561_LUX_K5C)
+    {
+        b = TSL2561_LUX_B5C;
+        m = TSL2561_LUX_M5C;
+    }
+    else if (ratio <= TSL2561_LUX_K6C)
+    {
+        b = TSL2561_LUX_B6C;
+        m = TSL2561_LUX_M6C;
+    }
+    else if (ratio <= TSL2561_LUX_K7C)
+    {
+        b = TSL2561_LUX_B7C;
+        m = TSL2561_LUX_M7C;
+    }
+    else if (ratio > TSL2561_LUX_K8C)
+    {
+        b = TSL2561_LUX_B8C;
+        m = TSL2561_LUX_M8C;
+    }
+#else
+    if ((ratio >= 0) && (ratio <= TSL2561_LUX_K1T))
+    {
+        b = TSL2561_LUX_B1T;
+        m = TSL2561_LUX_M1T;
+    }
+    else if (ratio <= TSL2561_LUX_K2T)
+    {
+        b = TSL2561_LUX_B2T;
+        m = TSL2561_LUX_M2T;
+    }
+    else if (ratio <= TSL2561_LUX_K3T)
+    {
+        b = TSL2561_LUX_B3T;
+        m = TSL2561_LUX_M3T;
+    }
+    else if (ratio <= TSL2561_LUX_K4T)
+    {
+        b = TSL2561_LUX_B4T;
+        m = TSL2561_LUX_M4T;
+    }
+    else if (ratio <= TSL2561_LUX_K5T)
+    {
+        b = TSL2561_LUX_B5T;
+        m = TSL2561_LUX_M5T;
+    }
+    else if (ratio <= TSL2561_LUX_K6T)
+    {
+        b = TSL2561_LUX_B6T;
+        m = TSL2561_LUX_M6T;
+    }
+    else if (ratio <= TSL2561_LUX_K7T)
+    {
+        b = TSL2561_LUX_B7T;
+        m = TSL2561_LUX_M7T;
+    }
+    else if (ratio > TSL2561_LUX_K8T)
+    {
+        b = TSL2561_LUX_B8T;
+        m = TSL2561_LUX_M8T;
+    }
+#endif
+
+    unsigned long temp;
+    channel0 = channel0 * b;
+    channel1 = channel1 * m;
+
+    temp = 0;
+    /* Do not allow negative lux value */
+    if (channel0 > channel1)
+        temp = channel0 - channel1;
+
+    /* Round lsb (2^(LUX_SCALE-1)) */
+    temp += (1 << (TSL2561_LUX_LUXSCALE - 1));
+
+    /* Strip off fractional portion */
+    uint32_t lux = temp >> TSL2561_LUX_LUXSCALE;
+
+    /* Signal I2C had no errors */
+    return lux;
 }
 
 void tsl2561_destroy(tsl2561 *dev)

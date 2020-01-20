@@ -178,6 +178,23 @@ int tsl2561_read_word_data(tsl2561*dev , uint8_t * data)
     return 1 ;
 }
 
+int tsl2561_read_byte_data(tsl2561* dev, uint8_t * data)
+{
+    uint8_t cmd = 0x8c ; int status = 1 ;
+    for ( int i = 0 ; i < 4 ; i++ )
+    {
+        int ch = i2c_smbus_read_byte_data(dev->fd, cmd) ;
+        cmd++ ;
+        if ( ch < 0 )
+        {
+            perror("[ERROR] Could not read byte data") ;
+            status = 0 ;
+        }
+        data[i] = ch ;
+    }
+    return status ;
+}
+
 int tsl2561_read_config(tsl2561 *dev, uint8_t *data)
 {
     tsl2561_command m_con;

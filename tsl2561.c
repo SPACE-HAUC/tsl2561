@@ -66,7 +66,7 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
         return -1;
     }
     printf("[DEBUG] TSL2561 Init: Read config register: 0x%x\n", cmd[0]) ;
-    if ((uint8_t)cmd[0] & 0x03)
+    if ((uint8_t)cmd[0] == 0x03)
     {
         printf("Initialization failed: 0x%x\n\n", 0x000000ff & (uint8_t)cmd[0]);
     }

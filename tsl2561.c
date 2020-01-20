@@ -50,7 +50,7 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     //     printf("Press enter key to continue...");
     //     scanf("%c", &c);
     // } while (c != '\n');
-    usleep(1000);
+    usleep(10000);
     // Device is powered --> verify device is TSL2561 sensor - read from ID reg
 
     // 1) Configure the command register
@@ -74,20 +74,6 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     uint8_t revno = (cmd[0] & 0x0F);
 
     printf("PARTNO: [%X], REVNO: [%04X]\n", partno, revno);
-
-    // If the part number is not 0x01, then the device is NOT TSL2561 - error
-    // if (partno != 0x01)
-    // {
-    //     perror("[ERROR] Invalid device.");
-    //     return -1;
-    // }
-
-    // Verify device powerup
-    // m_con.cmd = 1;
-    // m_con.clear = 0;
-    // m_con.word = 0;
-    // m_con.block = 0;
-    // m_con.address = TSL2561_REGISTER_CONTROL;
     cmd[0] = 0x80 ;
     dev_id = write(dev->fd, &(m_con.raw),1);
     if ((dev_id = read(dev->fd, cmd,1)) < 0)

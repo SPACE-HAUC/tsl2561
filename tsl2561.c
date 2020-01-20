@@ -43,13 +43,14 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
         perror("[ERROR] Could not power on the sensor.");
         return -1;
     }
-    printf("[DEBUG] TSL2561 waiting to proceed...\n") ;
-    char c;
-    do
-    {
-        printf("Press enter key to continue...");
-        scanf("%c", &c);
-    } while (c != '\n');
+    // printf("[DEBUG] TSL2561 waiting to proceed...\n") ;
+    // char c;
+    // do
+    // {
+    //     printf("Press enter key to continue...");
+    //     scanf("%c", &c);
+    // } while (c != '\n');
+    usleep(1000);
     // Device is powered --> verify device is TSL2561 sensor - read from ID reg
 
     // 1) Configure the command register

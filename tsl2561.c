@@ -87,7 +87,7 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     printf("[DEBUG] TSL2561 Init: Read config register: 0x%x\n", dev_id) ;
     if ((uint8_t)dev_id & 0x03)
     {
-        printf("Initialization success: 0x%x", 0x000000ff & (uint8_t)dev_id);
+        printf("Initialization success: 0x%x\n\n", 0x000000ff & (uint8_t)dev_id);
     }
     return 1;
 }
@@ -185,17 +185,25 @@ int tsl2561_read_byte_data(tsl2561* dev, uint8_t * data)
     for ( int i = 0 ; i < 4 ; i++ )
     {
         uint8_t tmp = 0x00 ;
-        int ch = i2c_smbus_read_i2c_block_data(dev->fd, cmd, 1, &tmp) ;
+        int ch = i2c_smbus_read_byte_data(dev->fd, cmd) ;
         cmd++ ;
         if ( ch < 0 )
         {
             perror("[ERROR] Could not read byte data") ;
             status = 0 ;
         }
-        data[i] = tmp ;
+        data[i] = ch ;
         printf("[DEBUG] TSL2561 read byte: %d 0x%x -> 0x%x\n", ch , cmd - 1, tmp ) ;
     }
     return status ;
+}
+
+int tsl2561_read_i2c_data(tsl2561* dev, uint8_t * data)
+{
+    char cmd = 0x9b ;
+    write(dev->fd, &cmd, 1) ;
+    read(dev->fd, data, 4) ;
+    return 1 ;
 }
 
 int tsl2561_read_config(tsl2561 *dev, uint8_t *data)

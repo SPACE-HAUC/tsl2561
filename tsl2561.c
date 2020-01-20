@@ -36,8 +36,9 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
 
     // 2) Write to the control register
     write_data = 0x03;
-
-    if (i2c_smbus_write_byte_data(dev->fd, 0x80, write_data) < 0)
+    uint8_t cmd[2] ;
+    cmd[0] = m_con.raw ; cmd[1] = write_data ;
+    if (write(dev->fd, cmd, 2) < 2)
     {
         perror("[ERROR] Could not power on the sensor.");
         return -1;
@@ -53,16 +54,17 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     m_con.address = TSL2561_REGISTER_ID;
 
     // 2) Initiate the read command and read byte from ID register
-    dev_id = i2c_smbus_read_byte_data(dev->fd, 0x8a);
-    if (dev_id < 0)
+    dev_id = write(dev->fd, &(m_con.raw),1);
+    dev_id = read(dev->fd, cmd, 1) ;
+    if (dev_id < 1)
     {
         perror("[ERROR] Could not read device ID.");
         return -1;
     }
 
     // Extract the part number and the revision number
-    uint8_t partno = (dev_id & 0xF0) >> 4;
-    uint8_t revno = (dev_id & 0x0F);
+    uint8_t partno = (cmd[0] & 0xF0) >> 4;
+    uint8_t revno = (cmd[0] & 0x0F);
 
     printf("PARTNO: [%X], REVNO: [%04X]\n", partno, revno);
 
@@ -79,15 +81,16 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     m_con.word = 0;
     m_con.block = 0;
     m_con.address = TSL2561_REGISTER_CONTROL;
-    if ((dev_id = i2c_smbus_read_byte_data(dev->fd, 0x80)) < 0)
+    dev_id = write(dev->fd, &(m_con.raw),1);
+    if ((dev_id = read(dev->fd, cmd,1)) < 0)
     {
         perror("[ERROR] Could not read device config.");
         return -1;
     }
-    printf("[DEBUG] TSL2561 Init: Read config register: 0x%x\n", dev_id) ;
-    if ((uint8_t)dev_id & 0x03)
+    printf("[DEBUG] TSL2561 Init: Read config register: 0x%x\n", cmd[0]) ;
+    if ((uint8_t)cmd[0] & 0x03)
     {
-        printf("Initialization success: 0x%x\n\n", 0x000000ff & (uint8_t)dev_id);
+        printf("Initialization success: 0x%x\n\n", 0x000000ff & (uint8_t)cmd[0]);
     }
     return 1;
 }

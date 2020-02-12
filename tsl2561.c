@@ -44,7 +44,7 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
     writecmd8(dev->fd, 0x81, 0x00);
     if (read8(dev->fd, 0x81))
     {
-        perror(__FUNCTION__"Could not set timing and gain");
+        perror("Could not set timing and gain");
         return -1;
     }
     return dev->fd; // should be > 0 in this case

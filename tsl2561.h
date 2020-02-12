@@ -21,8 +21,8 @@
 #include <sys/ioctl.h>
 #include <linux/types.h>
 #include <linux/i2c-dev.h>
-//#include </usr/src/linux-headers-4.4.0-171-generic/include/config/i2c/smbus.h>
-#include <i2c/smbus.h>
+// #include </usr/src/linux-headers-4.4.0-171-generic/include/config/i2c/smbus.h>
+// #include <i2c/smbus.h>
 #include <signal.h>
 
 /******************************************************************************/
@@ -180,15 +180,85 @@ typedef struct
     char fname[40];
 } tsl2561;
 
+/*
+ * Init function for the TSL2561 device. Default: I2C_BUS
+ */
 int tsl2561_init(tsl2561 *dev, uint8_t s_address);
-int tsl2561_configure(tsl2561 *dev);
-int tsl2561_write(tsl2561 *dev, uint8_t reg_addr, uint8_t data);
-int tsl2561_read_block_data(tsl2561 *dev, uint8_t *data);
-int tsl2561_read_word_data(tsl2561 *dev, uint8_t *data);
-int tsl2561_read_byte_data(tsl2561 *dev, uint8_t *data);
-int tsl2561_read_i2c_data(tsl2561 *dev, uint8_t *data);
-int tsl2561_read_config(tsl2561 *dev, uint8_t *data);
-uint32_t tsl2561_get_lux(tsl2561 *dev);
+/*
+ * Read I2C data into the uint32_t measure var.
+ * Format: (MSB) broadband | ir (LSB)
+ */
+void tsl2561_measure(tsl2561 *dev, uint32_t *measure);
+/*
+ * Get lux using the measured value.
+ */
+uint32_t tsl2561_get_lux(uint32_t measure);
+/*
+ * Destroy function for the TSL2561 device. Closes the file descriptor and powers * down the device
+ */
 void tsl2561_destroy(tsl2561 *dev);
+
+/* 
+ * Internal functions to read the sensors using the I2C protocol
+ */
+
+/* 
+ * write 8 bytes to the device represented by the file descriptor.
+ */
+static inline void write8(int fd, uint8_t val)
+{
+    uint8_t buf = val ;
+    int res = write(fd, &buf, 1);
+    if ( res != 1 )
+        perror(__FUNCTION__);
+}
+/* 
+ * Write a command to the register on the device represented by fd
+ */
+static inline void writecmd8(int fd, uint8_t reg, uint8_t val)
+{
+    uint8_t buf[2] = {0x0};
+    buf[0] = reg ; buf[1] = val ;
+    int res = write(fd, &buf, 2);
+    if ( res != 2 )
+        perror(__FUNCTION__);
+}
+/* 
+ * Read a byte from the specified register on the device represented by fd
+ */
+static inline uint8_t read8(int fd, uint8_t reg)
+{
+    write8(fd, reg);
+    uint8_t buf = 0x00 ;
+    int res = read(fd, &buf, 1);
+    if ( res != 1 )
+        perror(__FUNCTION__);
+    return buf;
+}
+/* 
+ * Write 16 bits to the device (very similar to writecmd8())
+ */
+static inline void write16(int fd, uint16_t val)
+{
+    uint8_t buf[2] ;
+    buf[0] = val >> 8 ;
+    buf[1] = 0x00ff & val ;
+    int res = write(fd, buf, 2);
+    if ( res != 2 )
+        perror(__FUNCTION__);
+    return;
+}
+/* 
+ * Read 2 bytes in LE format from reg on the device represented by fd 
+ */
+static inline uint16_t read16(int fd, uint8_t cmd)
+{
+    uint8_t buf[2] = {0x0};
+    write8(fd, cmd);
+    int res = read(fd, buf, 2);
+    if ( res != 2 )
+        perror(__FUNCTION__);
+    return buf[0] | ((unsigned short)buf[1]) << 8 ;
+}
 
 #endif // TSL2561_H

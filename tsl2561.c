@@ -27,7 +27,7 @@ int tsl2561_init(tsl2561 *dev, uint8_t s_address)
 
     // Power the device - write to control register
     writecmd8(dev->fd, 0x80, 0x03);
-    usleep(1000);
+    usleep(100000);
     // Verify that device is powered
     if (read8(dev->fd, 0x80) != 0x33)
     {

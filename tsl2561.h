@@ -2,7 +2,7 @@
  * @file tsl2561.h
  * @author Sunip K. Mukherjee (sunipkmukherjee@gmail.com)
  * @brief TSL2561 I2C driver function and struct declarations
- * @version 0.1
+ * @version 0.2
  * @date 2020-03-19
  * 
  * @copyright Copyright (c) 2020
@@ -155,21 +155,48 @@ typedef enum
 } tsl2561Gain_t;
 
 /******************************************************************************/
-#define I2C_BUS "/dev/i2c-1"    ///< I2C bus name
 #define TSL2561_BLOCK_READ 0x0B ///< Block read mask
 
+#include <i2cbus/i2cbus.h>
 /**
  * @brief TSL2561 Device Handle
  * 
  */
-typedef struct
-{
-    int fd;         ///< File descriptor for I2C bus
-    char fname[40]; ///< I2C Device name
-} tsl2561;
+typedef i2cbus tsl2561;
 
-int tsl2561_init(tsl2561 *dev, uint8_t s_address);
-void tsl2561_measure(tsl2561 *dev, uint32_t *measure);
+/**
+ * @brief Opens a TSL2561 Lux sensor on bus given by ID (X in /dev/i2c-X)
+ * at address addr, belonging to context ctx.
+ * TODO: Fix init + gain, figure out what goes wrong if ID
+ * register is read
+ * 
+ * @param dev tsl2561 device handle, which is an alias to i2cbus handle
+ * @param id I2C Bus ID
+ * @param addr Device Address
+ * @param ctx Device context
+ * @return int Status of i2cbus_open call
+ */
+int tsl2561_init(tsl2561 *dev, int id, int addr, int ctx);
+/**
+ * @brief Get a measurement and store it in the 
+ * 
+ * @param dev Handle to tsl2561 device
+ * @param measure Pointer to uint32 where measurement is stored
+ * 
+ * @return int Return status of i2cbus_read
+ */
+int tsl2561_measure(tsl2561 *dev, uint32_t *measure);
+/**
+ * @brief Convert a raw TSL2561 measurement to lux
+ * 
+ * @param measure Measurement using tsl2561_measure
+ * @return uint32_t Lux output from measurement
+ */
 uint32_t tsl2561_get_lux(uint32_t measure);
-void tsl2561_destroy(tsl2561 *dev);
+/**
+ * @brief Close I2C bus corresponding to the device
+ * 
+ * @param dev tsl2561 device handle
+ */
+int tsl2561_destroy(tsl2561 *dev);
 #endif // TSL2561_H

@@ -13,153 +13,104 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
 #include <errno.h>
-#include <sys/ioctl.h>
-#include <linux/types.h>
-#include <linux/i2c-dev.h>
 #include "tsl2561.h"
-// #include </usr/src/linux-headers-4.4.0-171-generic/include/config/i2c/smbus.h>
-// #include <i2c/smbus.h>
-#include <signal.h>
+#include <i2cbus/i2cbus.h>
 
-/**
- * @brief write 8 bytes to the device represented by the file descriptor.
- * 
- * @param fd 
- * @param val 
- */
-static inline void write8(int fd, uint8_t val)
-{
-    uint8_t buf = val;
-    int res = write(fd, &buf, 1);
-    if (res != 1)
-        perror(__FUNCTION__);
-}
-/**
- * @brief Write a command to the register on the device represented by fd
- * 
- * @param fd File descriptor
- * @param reg Register address
- * @param val Value to write at register address
- */
-static inline void writecmd8(int fd, uint8_t reg, uint8_t val)
-{
-    uint8_t buf[2] = {0x0};
-    buf[0] = reg;
-    buf[1] = val;
-    int res = write(fd, &buf, 2);
-    if (res != 2)
-        perror(__FUNCTION__);
-}
-/**
- * @brief Read a byte from the specified register on the device represented by fd
- * 
- * @param fd 
- * @param reg Register address
- * @return Byte read over serial 
- */
-static inline uint8_t read8(int fd, uint8_t reg)
-{
-    write8(fd, reg);
-    uint8_t buf = 0x00;
-    int res = read(fd, &buf, 1);
-    if (res != 1)
-        perror(__FUNCTION__);
-    return buf;
-}
-/**
- * @brief Write 16 bits to the device (very similar to writecmd8())
- * 
- * @param fd 
- * @param val 
- */
-static inline void write16(int fd, uint16_t val)
-{
-    uint8_t buf[2];
-    buf[0] = val >> 8;
-    buf[1] = 0x00ff & val;
-    int res = write(fd, buf, 2);
-    if (res != 2)
-        perror(__FUNCTION__);
-    return;
-}
-/**
- * @brief Read 2 bytes in LE format from reg on the device represented by fd 
- * 
- * @param fd 
- * @param cmd 
- * @return uint16_t 
- */
-static inline uint16_t read16(int fd, uint8_t cmd)
-{
-    uint8_t buf[2] = {0x0};
-    write8(fd, cmd);
-    int res = read(fd, buf, 2);
-    if (res != 2)
-        perror(__FUNCTION__);
-    return buf[0] | ((unsigned short)buf[1]) << 8;
-}
+#define eprintf(...) fprintf(stderr, __VA_ARGS__)
 
-/**
- * @brief Init function for the TSL2561 device. Default: I2C_BUS
- * TODO: Fix init + gain, figure out what goes wrong if ID
- * register is read
- * 
- * @param dev 
- * @param s_address Address for the device, values: 0x29, 0x39, 0x49
- * @return 1 on success, -1 on failure
- */
-int tsl2561_init(tsl2561 *dev, uint8_t s_address)
+int tsl2561_init(tsl2561 *dev, int id, int addr, int ctx)
 {
     // Create the file descriptor handle to the device
-    dev->fd = open(I2C_BUS, O_RDWR);
-    if (dev->fd < 0)
+    if (i2cbus_open(dev, id, addr) < 0)
     {
-        perror("[ERROR] TSL2561 Could not create a file descriptor.");
-        return -1;
-    }
-
-    // Configure file descriptor handle as a slave device w/input address
-    if (ioctl(dev->fd, I2C_SLAVE, s_address) < 0)
-    {
-        perror("[ERROR] TSL2561 Could not assign device.");
+        eprintf("%s: Error: Failed to open I2C Bus: ", __func__);
+        perror(__FUNCTION__);
         return -1;
     }
 
     // Power the device - write to control register
-    writecmd8(dev->fd, 0x80, 0x03);
+    unsigned char cmd_pwup[] = {0x80, 0x03};
+    if (i2cbus_write(dev, cmd_pwup, sizeof(cmd_pwup)) < 0)
+    {
+        eprintf("%s: Error: Failed to send power up command: ", __func__);
+        perror(__FUNCTION__);
+        return -1;
+    }
     usleep(100000);
     // Verify that device is powered
-    if ((read8(dev->fd, 0x80) & 0x3) != 0x3)
+    if (i2cbus_xfer(dev, cmd_pwup, 1, cmd_pwup + 1, 1, 0) < 0)
     {
-        perror("Device not powered up");
+        eprintf("%s: Error: Could not read the power up register: ", __func__);
+        perror(__FUNCTION__);
+        return -1;
+    }
+    if (cmd_pwup[1] & 0x3 != 0x3)
+    {
+        eprintf("%s: Power up failed, returned 0x02x\n", __func__, cmd_pwup[1]);
         return -1;
     }
     /* DO NOT READ THE DEVICE REGISTER */
 #ifdef CSS_LOW_GAIN
     // Set the timing and gain
-    writecmd8(dev->fd, 0x81, 0x00);
-    if (read8(dev->fd, 0x81))
+    unsigned char cmd_gain[] = {0x81, 0x0};
+    if (i2cbus_write(dev, cmd_gain, sizeof(cmd_gain)) < 0)
     {
-        perror("Could not set timing and gain");
+        eprintf("%s: Error: Failed to send gain command: ", __func__);
+        perror(__FUNCTION__);
+        return -1;
+    }
+    usleep(100000);
+    if (i2cbus_xfer(dev, cmd_gain, 1, cmd_gain + 1, 1, 0) < 0)
+    {
+        eprintf("%s: Error: Could not read the gain register: ", __func__);
+        perror(__FUNCTION__);
+        return -1;
+    }
+    if (cmd_gain[1])
+    {
+        eprintf("%s: Could not set timing and gain\n", __func__);
         return -1;
     }
 #endif
-    return dev->fd; // should be > 0 in this case
+    return 1;
 }
-/**
- * @brief Read I2C data into the uint32_t measure var.\
- * Format: (MSB) broadband | ir (LSB)
- * 
- * @param dev 
- * @param measure Pointer to unsigned 32 bit integer where measurement is stored
- */
-void tsl2561_measure(tsl2561 *dev, uint32_t *measure)
+
+#define likely(x) __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+
+int tsl2561_measure(tsl2561 *dev, uint32_t *measure)
 {
-    *measure = ((uint32_t)read16(dev->fd, 0xac)) << 16 | read16(dev->fd, 0xae);
-    return;
+    if (unlikely(dev == NULL))
+    {
+        return -1;
+    }
+    *measure = 0x0;
+    uint8_t cmd_buf[] = {0xac, 0x0};
+    if (unlikely(i2cbus_xfer(dev, cmd_buf, 1, cmd_buf, 2, 0) < 0))
+    {
+        eprintf("%s: Error reading first set of bytes\n", __func__);
+        return -1;
+    }
+    *measure |= cmd_buf[0] << 8 | cmd_buf[1];
+    *measure <<= 16;
+#ifdef TSL2561_DEBUG
+    eprintf("%s: Step 1: 0x%02x%02x -> 0x%08x\t", __fund__, cmd_buf[0], cmd_buf[1], *measure);
+#endif
+    cmd_buf[0] = 0xae;
+    cmd_buf[1] = 0x0;
+    if (unlikely(i2cbus_xfer(dev, cmd_buf, 1, cmd_buf, 2, 0) < 0))
+    {
+        eprintf("%s: Error reading first set of bytes\n", __func__);
+        return -1;
+    }
+    *measure |= cmd_buf[0] << 8 | cmd_buf[1];
+#ifdef TSL2561_DEBUG
+    eprintf("Step 2: 0x%02x%02x -> 0x%08x\n", cmd_buf[0], cmd_buf[1], *measure);
+#endif
+    return 1;
 }
+
 /**
  * @brief Calculate lux using value measured using tsl2561_measure()
  * 
@@ -307,15 +258,71 @@ uint32_t tsl2561_get_lux(uint32_t measure)
     /* Signal I2C had no errors */
     return lux;
 }
-/**
- * @brief Destroy function for the TSL2561 device. Closes the file descriptor
- *  and powers down the device
- * 
- * @param dev 
- */
-void tsl2561_destroy(tsl2561 *dev)
+
+int tsl2561_destroy(tsl2561 *dev)
 {
-    writecmd8(dev->fd, 0x80, 0x00);
-    close(dev->fd);
+    static unsigned char cmd_buf[] = {0x80, 0x0};
+    if (i2cbus_write(dev, cmd_buf, 2) < 0)
+    {
+        eprintf("%s: Could not send power down command\n", __func__);
+        return -1;
+    }
+    return i2cbus_close(dev);
+}
+
+#ifdef UNIT_TEST
+#include <signal.h>
+#include <stdio.h>
+#include <string.h>
+volatile sig_atomic_t done = 0;
+
+void sighandler(int sig)
+{
+    done = 1;
+#ifdef TSL2561_DEBUG
+    eprintf("%s: Received signal %d\n", __func__, sig);
+#endif
+}
+
+int main(int argc, char *argv[])
+{
+    if (argc != 3)
+    {
+        printf("Invocation: ./%s <Bus ID> <Address (in hex)>\n\n", argv[0]);
+        return 0;
+    }
+    int id = atoi(argv[0]);
+    int addr = (int)strtol(argv[2], NULL, 16); // convert to hex
+    if (addr != 0x29 || addr != 0x39 || addr != 0x49)
+    {
+        printf("0x%02x is not appropriate for TSL2561, exiting...\n", addr);
+        return -1;
+    }
+    tsl2561 *dev = (tsl2561 *)malloc(sizeof(tsl2561));
+    if (tsl2561_init(dev, id, addr, 0x0) < 0)
+    {
+        printf("Could not initialize device, exiting...\n");
+        goto end;
+    }
+    signal(SIGINT, &sighandler);
+    while(!done)
+    {
+        unsigned int measure = 0x0;
+        if (tsl2561_measure(dev, &measure) < 0)
+        {
+            printf("main: Error taking measurement, exiting...\n");
+            break;
+        }
+        int num_char = printf("0x%08x | %05d", measure, tsl2561_get_lux(measure));
+        fflush(stdout);
+        usleep(100000);
+        printf("\r");
+        while(num_char--)
+            printf(" ");
+        printf("\r");
+    }
+    printf("\n");
+end:
     free(dev);
 }
+#endif

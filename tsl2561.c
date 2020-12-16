@@ -323,6 +323,7 @@ int main(int argc, char *argv[])
     }
     printf("\n");
 end:
+    tsl2561_destroy(dev);
     free(dev);
 }
 #endif

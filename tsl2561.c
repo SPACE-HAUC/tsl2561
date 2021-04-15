@@ -15,17 +15,18 @@
 #include <stdlib.h>
 #include <errno.h>
 #include "tsl2561.h"
-#include <i2cbus/i2cbus.h>
+#include "i2cbus/i2cbus.h"
 
-#define eprintf(...) fprintf(stderr, __VA_ARGS__)
+#define eprintf(str, ...) \
+    fprintf(stderr, "%s, %d: " str "\n", __func__, __LINE__, ##__VA_ARGS__); \
+    fflush(stderr)
 
 int tsl2561_init(tsl2561 *dev, int id, int addr, int ctx)
 {
     // Create the file descriptor handle to the device
     if (i2cbus_open(dev, id, addr) < 0)
     {
-        eprintf("%s: Error: Failed to open I2C Bus: ", __func__);
-        perror(__FUNCTION__);
+        eprintf("Error: Failed to open I2C Bus");
         return -1;
     }
 
@@ -33,21 +34,19 @@ int tsl2561_init(tsl2561 *dev, int id, int addr, int ctx)
     unsigned char cmd_pwup[] = {0x80, 0x03};
     if (i2cbus_write(dev, cmd_pwup, sizeof(cmd_pwup)) < 0)
     {
-        eprintf("%s: Error: Failed to send power up command: ", __func__);
-        perror(__FUNCTION__);
+        eprintf("Error: Failed to send power up command");
         return -1;
     }
     usleep(100000);
     // Verify that device is powered
     if (i2cbus_xfer(dev, cmd_pwup, 1, cmd_pwup + 1, 1, 0) < 0)
     {
-        eprintf("%s: Error: Could not read the power up register: ", __func__);
-        perror(__FUNCTION__);
+        eprintf("Error: Could not read the power up register");
         return -1;
     }
-    if (cmd_pwup[1] & 0x3 != 0x3)
+    if ((cmd_pwup[1] & 0x3) != 0x3)
     {
-        eprintf("%s: Power up failed, returned 0x02x\n", __func__, cmd_pwup[1]);
+        eprintf("Power up failed, returned 0x%02x", cmd_pwup[1]);
         return -1;
     }
     /* DO NOT READ THE DEVICE REGISTER */
@@ -56,20 +55,18 @@ int tsl2561_init(tsl2561 *dev, int id, int addr, int ctx)
     unsigned char cmd_gain[] = {0x81, 0x0};
     if (i2cbus_write(dev, cmd_gain, sizeof(cmd_gain)) < 0)
     {
-        eprintf("%s: Error: Failed to send gain command: ", __func__);
-        perror(__FUNCTION__);
+        eprintf("Error: Failed to send gain command");
         return -1;
     }
     usleep(100000);
     if (i2cbus_xfer(dev, cmd_gain, 1, cmd_gain + 1, 1, 0) < 0)
     {
-        eprintf("%s: Error: Could not read the gain register: ", __func__);
-        perror(__FUNCTION__);
+        eprintf("Error: Could not read the gain register");
         return -1;
     }
     if (cmd_gain[1])
     {
-        eprintf("%s: Could not set timing and gain\n", __func__);
+        eprintf("Could not set timing and gain");
         return -1;
     }
 #endif
@@ -262,7 +259,7 @@ uint32_t tsl2561_get_lux(uint32_t measure)
 int tsl2561_destroy(tsl2561 *dev)
 {
     static unsigned char cmd_buf[] = {0x80, 0x0};
-    if (i2cbus_write(dev, cmd_buf, 2) < 0)
+    if (i2cbus_write(dev, cmd_buf, 2) != 2)
     {
         eprintf("%s: Could not send power down command\n", __func__);
         return -1;
@@ -325,5 +322,104 @@ int main(int argc, char *argv[])
 end:
     tsl2561_destroy(dev);
     free(dev);
+}
+#endif
+
+#ifdef UNIT_TEST_COMPLETE
+#include <stdio.h>
+#include <signal.h>
+#include <string.h>
+#include <unistd.h>
+#include <papi.h>
+#include "tca9458a/tca9458a.h"
+
+volatile sig_atomic_t done = 0;
+void sighandler(int sig)
+{
+    done = 1;
+}
+
+int main(int argc, char *argv[])
+{
+    int retval = PAPI_library_init(PAPI_VER_CURRENT);
+    if (retval != PAPI_VER_CURRENT)
+    {
+        eprintf("PAPI init error");
+    }
+    signal(SIGINT, &sighandler);
+    if (argc != 2)
+    {
+        printf("Invocation: sudo luxsensor <I2C Bus>\n\n");
+        goto end;
+    }
+    int bus = atoi(argv[1]);
+    int addr[] = {0x29, 0x39, 0x49};
+    tsl2561 **lux = (tsl2561 **)malloc(sizeof(tsl2561 *) * 9);
+    for (int i = 0; i < 9; i++)
+    {
+        lux[i] = (tsl2561 *)malloc(sizeof(tsl2561));
+    }
+    tca9458a mux[1];
+    if (tca9458a_init(mux, bus, 0x70, -1) < 0)
+    {
+        eprintf("Initializing mux failed");
+    }
+    for (int i = 0; i < 9; i++)
+    {
+        if ((i % 3) == 0) // switch mux
+        {
+            tca9458a_set(mux, i / 3);
+        }
+        if (tsl2561_init(lux[i], bus, addr[i % 3], -1) < 0)
+        {
+            eprintf("Error opening device on bus %d channel %d address 0x%02x, fd = %d\n", bus, i / 3, addr[i % 3], lux[i]->fd);
+        }
+        else
+            printf("Opened device on bus %d channel %d address 0x%02x, fd = %d\n", bus, i / 3, addr[i % 3], lux[i]->fd);
+    }
+    while (!done)
+    {
+        int charout = printf("Lux:");
+        uint32_t mes[9] = {0x0, };
+        long long s = PAPI_get_real_usec();
+        for (int i = 0; i < 9 && (!done); i++)
+        {
+            if ((i % 3) == 0) // switch mux
+            {
+                tca9458a_set(mux, i / 3);
+            }
+            tsl2561_measure(lux[i], &mes[i]);
+        }
+        long long e = PAPI_get_real_usec();
+        for (int i = 0; i < 9 && (!done); i++)
+            charout += printf(" %d", tsl2561_get_lux(mes[i]));
+        charout += printf(" | Time: %lld us", e - s);
+        fflush(stdout);
+        usleep(1000 * 200); // 200 ms update
+        printf("\r");
+        for (int i = 0; i < charout; i++)
+            printf(" ");
+        printf("\r");
+        fflush(stdout);
+    }
+    printf("Received Ctrl + C!\n");
+    fflush(stdout);
+    for (int i = 0; i < 9; i++)
+    {
+        if ((i % 3) == 0) // switch mux
+        {
+            tca9458a_set(mux, i / 3);
+            printf("Set mux to channel %d\n", (i / 3) + 1);
+            fflush(stdout);
+            usleep(10 * 1000);
+        }
+        tsl2561_destroy(lux[i]);
+        usleep(10 * 1000);
+    }
+    tca9458a_set(mux, 8);; // disable mux
+    tca9458a_destroy(mux);
+    free(lux);
+end:
+    return 0;
 }
 #endif

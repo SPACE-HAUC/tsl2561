@@ -1,3 +1,6 @@
 [submodule "drivers/i2cbus"]
 	path = drivers/i2cbus
 	url = git@github.com:SPACE-HAUC/i2cbus.git
+[submodule "drivers/tca9458a"]
+	path = drivers/tca9458a
+	url = git@github.com:SPACE-HAUC/tca9458a.git

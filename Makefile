@@ -1,41 +1,33 @@
 CC=gcc
-CXX=g++
-RM= /bin/rm -vf
-PYTHON=python3
-ARCH=UNDEFINED
-PWD=pwd
-CDR=$(shell pwd)
+RM= rm -vf
 
-EDCFLAGS:=$(CFLAGS)
-EDLDFLAGS:=$(LDFLAGS)
-EDDEBUG:=$(DEBUG)
+EDCFLAGS:= -O2 -Wall -std=gnu11 -I ./ -I include/ -I drivers/ $(CFLAGS) $(DEBUG)
+EDLDFLAGS:= -lm -lpapi -lpthread $(EDLDFLAGS)
 
-EDCFLAGS:= -Wall -std=gnu11 $(EDCFLAGS) $(EDDEBUG)
-EDLDFLAGS:= -lm -lpthread $(EDLDFLAGS)
+test: EDCFLAGS+= -DUNIT_TEST_COMPLETE
 
-test: EDCFLAGS:= -O2 -DUNIT_TEST $(EDCFLAGS)
-
-BUILDDRV=drivers/i2cbus/i2cbus.o
+BUILDDRV=drivers/i2cbus/i2cbus.o \
+	drivers/tca9458a/tca9458a.o
 
 BUILDOBJS=$(BUILDDRV) \
 tsl2561.o
 
-EPSTARGET=lux_tester.out
+TARGET=lux_tester.out
 
-test: $(EPSTARGET)
+test: $(TARGET)
 
-$(EPSTARGET): $(BUILDOBJS)
-	$(CC) $(BUILDOBJS) $(EDCFLAGS) -Idrivers/ -I./ $(LINKOPTIONS) -o $@ \
+$(TARGET): $(BUILDOBJS)
+	$(CC) $(BUILDOBJS) $(EDCFLAGS) $(LINKOPTIONS) -o $@ \
 	$(EDLDFLAGS)
 
 %.o: %.c
-	$(CC) $(EDCFLAGS) $(EDDEBUG) -Idrivers/ -I./ -o $@ -c $<
+	$(CC) $(EDCFLAGS) $(EDDEBUG) -o $@ -c $<
 
 .PHONY: clean
 
 clean:
 	$(RM) $(BUILDOBJS)
-	$(RM) $(EPSTARGET)
+	$(RM) $(TARGET)
 
 spotless: clean
 

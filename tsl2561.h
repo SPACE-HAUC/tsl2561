@@ -11,7 +11,9 @@
 
 #ifndef TSL2561_H
 #define TSL2561_H
-
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include <stdint.h>
 
 /******************************************************************************/
@@ -199,4 +201,7 @@ uint32_t tsl2561_get_lux(uint32_t measure);
  * @param dev tsl2561 device handle
  */
 int tsl2561_destroy(tsl2561 *dev);
+#ifdef __cplusplus
+}
+#endif
 #endif // TSL2561_H

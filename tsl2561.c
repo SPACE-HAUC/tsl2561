@@ -267,7 +267,7 @@ int tsl2561_destroy(tsl2561 *dev)
     return i2cbus_close(dev);
 }
 
-#ifdef UNIT_TEST
+#ifdef UNIT_TEST_SINGLE
 #include <signal.h>
 #include <stdio.h>
 #include <string.h>
@@ -288,9 +288,9 @@ int main(int argc, char *argv[])
         printf("Invocation: ./%s <Bus ID> <Address (in hex)>\n\n", argv[0]);
         return 0;
     }
-    int id = atoi(argv[0]);
+    int id = atoi(argv[1]);
     int addr = (int)strtol(argv[2], NULL, 16); // convert to hex
-    if (addr != 0x29 || addr != 0x39 || addr != 0x49)
+    if (!((addr == 0x29) || (addr == 0x39) || (addr == 0x49)))
     {
         printf("0x%02x is not appropriate for TSL2561, exiting...\n", addr);
         return -1;

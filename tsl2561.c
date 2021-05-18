@@ -89,7 +89,7 @@ int tsl2561_measure(tsl2561 *dev, uint32_t *measure)
         eprintf("%s: Error reading first set of bytes\n", __func__);
         return -1;
     }
-    *measure |= cmd_buf[0] << 8 | cmd_buf[1];
+    *measure |= cmd_buf[1] << 8 | cmd_buf[0];
     *measure <<= 16;
 #ifdef TSL2561_DEBUG
     eprintf("%s: Step 1: 0x%02x%02x -> 0x%08x\t", __fund__, cmd_buf[0], cmd_buf[1], *measure);
@@ -101,7 +101,7 @@ int tsl2561_measure(tsl2561 *dev, uint32_t *measure)
         eprintf("%s: Error reading first set of bytes\n", __func__);
         return -1;
     }
-    *measure |= cmd_buf[0] << 8 | cmd_buf[1];
+    *measure |= cmd_buf[1] << 8 | cmd_buf[0];
 #ifdef TSL2561_DEBUG
     eprintf("Step 2: 0x%02x%02x -> 0x%08x\n", cmd_buf[0], cmd_buf[1], *measure);
 #endif
